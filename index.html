@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Caserita Smart - POS por Voz</title>
+    <meta name="theme-color" content="#4a3728"/>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css?v=1.3" />
+    <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.10.0",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root">
+        <div id="login-container" class="login-container">
+            <div class="login-box">
+                <h1>Caserita Smart</h1>
+                <p>Tu asistente de ventas inteligente</p>
+                <form id="login-form">
+                    <input type="text" id="username" placeholder="Usuario" required value="vendedor">
+                    <input type="password" id="password" placeholder="Contraseña" required value="caserita123">
+                    <button type="submit">Ingresar</button>
+                    <p id="login-error" class="login-error"></p>
+                </form>
+            </div>
+        </div>
+
+        <div id="app-container" class="app-container hidden">
+            <header>
+                <h1>Caserita Smart</h1>
+                <button id="logout-button">Salir</button>
+            </header>
+            <main class="app-main-content">
+                <div class="left-panel">
+                    <section class="bill-section">
+                        <div class="bill-header">
+                            <h2>Cuenta Actual</h2>
+                            <button class="action-button" id="new-bill-button">Nueva Cuenta</button>
+                        </div>
+                        <div class="bill-items" id="bill-items">
+                            <p class="empty-message">La cuenta está vacía.</p>
+                        </div>
+                        <div class="bill-summary">
+                            <div class="bill-total">
+                                <h3 id="bill-total">Total: S/ 0.00</h3>
+                            </div>
+                            <div id="payment-buttons" class="payment-buttons">
+                                <button class="payment-button yape" id="pay-yape-button">Pagar con YAPE</button>
+                                <button class="payment-button cash" id="pay-cash-button">Pagar en Efectivo</button>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="catalog-section">
+                        <div class="catalog-header">
+                            <h2>Mi Catálogo</h2>
+                            <div class="catalog-header-actions">
+                               <button class="action-button blue" id="movement-inventory-button">MOVIMIENTO E INVENTARIO</button>
+                               <button class="action-button blue" id="export-report-button">EXPORTAR REPORTE</button>
+                            </div>
+                        </div>
+                        <div id="catalog-content-wrapper" class="hidden">
+                            <div id="detailed-inventory-container"></div>
+                            <form id="add-product-form" class="hidden">
+                                <input type="text" id="product-name" placeholder="Producto" required>
+                                <input type="number" id="product-price" placeholder="S/" step="0.1" min="0" required>
+                                <input type="number" id="product-stock" placeholder="Stock" min="0" required>
+                                <button type="submit" aria-label="Agregar producto al catálogo">+</button>
+                            </form>
+                            <div id="catalog-items" class="catalog-items">
+                                <p class="empty-message">Agrega productos a tu catálogo.</p>
+                            </div>
+                             <div id="summary-dashboard"></div>
+                        </div>
+                    </section>
+                </div>
+                <div class="right-panel">
+                    <div class="mic-container">
+                        <div class="mic-panic-wrapper">
+                             <button class="mic-button" id="mic-button" aria-label="Iniciar grabación">
+                                <svg id="mic-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                            </button>
+                            <button class="panic-button" id="panic-button" aria-label="Botón de pánico">
+                                 <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#FFFFFF"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 5.99L19.53 19H4.47L12 5.99M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z"/></svg>
+                            </button>
+                        </div>
+                        <p id="live-transcript-display" class="live-transcript"></p>
+                        <p class="status-message" id="status-message">Presiona para hablar</p>
+                    </div>
+
+                    <div class="actions-grid">
+                        <button class="control-button" id="share-button">
+                             <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#FFFFFF"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3z"/></svg>
+                            <span>Compartir Cuenta</span>
+                        </button>
+                        <button class="control-button" id="print-ticket-button"><span>IMPRIMIR TICKET</span></button>
+                        <button class="control-button" id="tutorial-button"><span>TUTORIAL</span></button>
+                        <button class="control-button" id="tips-button"><span>TIPS</span></button>
+                        <button class="control-button" id="config-button"><span>CONFIGURACIÓN</span></button>
+                        <button class="control-button" id="test-voice-button"><span>TEST DE VOZ</span></button>
+                    </div>
+
+                    <div class="sales-history-navigator">
+                        <h4>VENTAS EFECTUADAS</h4>
+                        <div id="sales-history-display">REGISTRO: --</div>
+                        <div class="sales-history-controls">
+                            <button id="sales-history-prev">⬆️</button>
+                            <button id="sales-history-next">⬇️</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+             <div id="teleprompter">
+                <div id="teleprompter-content"></div>
+            </div>
+             <div id="panic-overlay" class="panic-overlay hidden"></div>
+        </div>
+
+        <!-- Payment Confirmation Modal -->
+        <div id="confirmation-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3 id="modal-title">Confirmar Pago</h3>
+                <p id="modal-message">¿Está seguro de que desea procesar este pago?</p>
+                <div class="modal-actions">
+                    <button id="modal-cancel-button" class="modal-button cancel">Cancelar</button>
+                    <button id="modal-confirm-button" class="modal-button confirm">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Amount Adjustment Modal -->
+        <div id="adjust-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3 id="adjust-modal-title">Ajustar Monto</h3>
+                <div id="adjust-modal-body">
+                    <!-- Content will be generated dynamically -->
+                </div>
+                <div class="modal-actions">
+                    <button id="adjust-modal-cancel" class="modal-button cancel">Cancelar</button>
+                    <button id="adjust-modal-save" class="modal-button confirm">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips Modal -->
+        <div id="tips-modal" class="modal-overlay hidden">
+            <div class="modal-content tips-content">
+                <h3>Tips de Caserita Smart</h3>
+                <ul id="tips-list">
+                    <li><strong>Pedidos:</strong> Usa tu voz para agilizar. Di "dos de azúcar" o "un sol de arroz" y la app lo añade a la cuenta.</li>
+                    <li><strong>Registro de Compras:</strong> Próximamente podrás registrar tus facturas de compra para llevar un control de gastos más preciso.</li>
+                    <li><strong>Proveedores:</strong> En futuras versiones, podrás guardar y gestionar la información de contacto de tus proveedores.</li>
+                    <li><strong>Registro de Ventas:</strong> Todas tus ventas quedan guardadas. Puedes verlas con las flechas de "VENTAS EFECTUADAS" o exportarlas a Excel con "EXPORTAR VENTAS".</li>
+                    <li><strong>Utilidad:</strong> Próximamente, la app te mostrará la utilidad de tus ventas para que sepas cuánto estás ganando realmente.</li>
+                    <li><strong>Vencimientos Próximos:</strong> En la tabla de inventario, identifica rápidamente los productos que están por vencer para planificar ofertas y evitar pérdidas.</li>
+                    <li><strong>Promociones con IA:</strong> Muy pronto, el asistente te dará ideas de promociones inteligentes para ofrecer a tus clientes y aumentar tus ventas.</li>
+                </ul>
+                <div class="modal-actions">
+                    <button id="tips-modal-close" class="modal-button confirm">Entendido</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Config Modal -->
+        <div id="config-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3>Configuración</h3>
+                 <div class="adjust-form-group">
+                    <label for="config-user-code">Código de Usuario</label>
+                    <input type="text" id="config-user-code">
+                </div>
+                <div class="adjust-form-group">
+                    <label for="config-shop-name">Nombre de Tienda/Vendedor</label>
+                    <input type="text" id="config-shop-name">
+                </div>
+                <div class="adjust-form-group">
+                    <label for="config-speed-slider">Velocidad de Anuncios: <span id="config-speed-value">Normal</span></label>
+                    <input type="range" min="5" max="60" value="25" class="slider" id="config-speed-slider">
+                </div>
+                 <div class="adjust-form-group">
+                    <button id="config-toggle-teleprompter" class="modal-button confirm" style="width: 100%;">Pausar Anuncios</button>
+                </div>
+                <div class="adjust-form-group">
+                    <label for="config-voice-speed-slider">Velocidad de Voz: <span id="config-voice-speed-value">Normal</span></label>
+                    <input type="range" min="0.5" max="2" value="1.2" step="0.1" class="slider" id="config-voice-speed-slider">
+                </div>
+                <div class="adjust-form-group">
+                    <label for="config-voice-volume-slider">Volumen de Voz: <span id="config-voice-volume-value">100%</span></label>
+                    <input type="range" min="0" max="1" value="1" step="0.1" class="slider" id="config-voice-volume-slider">
+                </div>
+                <div class="modal-actions">
+                    <button id="config-modal-close" class="modal-button confirm">Guardar y Cerrar</button>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => console.log('ServiceWorker registration successful with scope: ', registration.scope))
+            .catch(err => console.log('ServiceWorker registration failed: ', err));
+        });
+      }
+    </script>
+    <script type="module" src="index.js"></script>
+</body>
+</html>

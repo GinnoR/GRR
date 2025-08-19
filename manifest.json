@@ -1,0 +1,21 @@
+{
+  "name": "Mi Bodeguita POS",
+  "short_name": "Caserita",
+  "description": "Punto de venta activado por voz para pequeños negocios.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f0e1",
+  "theme_color": "#4a3728",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

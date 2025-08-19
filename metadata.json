@@ -1,0 +1,8 @@
+{
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "name": "Caserita Smart_V3.0-1908-8.55",
+  "description": "Un asistente de punto de venta inteligente con control por voz, diseñado para el ágil mercado peruano. Gestiona catálogos, procesa pedidos y facilita los pagos.",
+  "prompt": ""
+}
